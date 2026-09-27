@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="manifest" href="/manifest.json">
+  <title>TinyPush</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 420px;
+      margin: 64px auto;
+      padding: 0 20px;
+    }
+
+    input, button {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 12px;
+      margin-top: 12px;
+      font: inherit;
+    }
+
+    #status {
+      min-height: 1.5em;
+    }
+  </style>
+</head>
+<body>
+  <h1>TinyPush</h1>
+  <p>One phone. One endpoint. That's it.</p>
+
+  <input id="token" type="password" placeholder="Bearer token" autocomplete="off">
+  <button id="subscribe">Enable notifications</button>
+  <p id="status"></p>
+
+  <script>
+    function base64UrlToUint8Array(value) {
+      const padding = "=".repeat((4 - (value.length % 4)) % 4);
+      const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
+      const raw = atob(base64);
+      return Uint8Array.from(raw, char => char.charCodeAt(0));
+    }
+
+    document.querySelector("#subscribe").addEventListener("click", async () => {
+      const token = document.querySelector("#token").value.trim();
+      const status = document.querySelector("#status");
+
+      try {
+        if (!token) throw new Error("Enter your token first.");
+        if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+          throw new Error("Web Push is not supported here.");
+        }
+
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          throw new Error("Notification permission was not granted.");
+        }
+
+        const registration = await navigator.serviceWorker.register("/sw.js");
+        await navigator.serviceWorker.ready;
+
+        const { publicKey } = await fetch("/api/vapid").then(response => {
+          if (!response.ok) throw new Error("Could not load VAPID key.");
+          return response.json();
+        });
+
+        const oldSubscription = await registration.pushManager.getSubscription();
+        if (oldSubscription) await oldSubscription.unsubscribe();
+
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: base64UrlToUint8Array(publicKey)
+        });
+
+        const response = await fetch("/api/subscribe", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(subscription)
+        });
+
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          throw new Error(result.error || "Subscribe failed.");
+        }
+
+        status.textContent = "Subscribed ✓";
+      } catch (error) {
+        status.textContent = error.message;
+      }
+    });
+  </script>
+</body>
+</html>
