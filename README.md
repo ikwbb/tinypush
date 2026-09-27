@@ -1,15 +1,19 @@
 # TinyPush
 
-Send notifications to your phone with a simple HTTP request.
+Send notifications to your **iPhone or iPad** with a simple HTTP request.
+
+> **TinyPush is for iPhone and iPad only.**
+>
+> Android and desktop browsers are not supported.
 
 TinyPush runs on Cloudflare Workers.
 
-```text
+```text id="2b1g7x"
 app / script / service
         ↓
     TinyPush
         ↓
-     phone 🔔
+  iPhone / iPad 🔔
 ```
 
 No account system.  
@@ -17,26 +21,35 @@ No dashboard.
 No notification history.  
 No dedicated server.
 
-TinyPush stores one phone subscription. If you connect another phone, it replaces the old one.
+TinyPush stores one device subscription. If you connect another iPhone or iPad, it replaces the old one.
+
+## Requirements
+
+- Cloudflare account
+- Node.js
+- iPhone or iPad
+- Safari
+
+On iPhone and iPad, TinyPush must be added to the Home Screen before notifications can be enabled.
 
 ## Setup
 
 Install dependencies:
 
-```bash
+```bash id="4a9ief"
 npm install
 npx wrangler login
 ```
 
 Create a KV store:
 
-```bash
+```bash id="82zxws"
 npx wrangler kv namespace create PUSH
 ```
 
 Put the returned ID into `wrangler.toml`:
 
-```toml
+```toml id="61pxcc"
 [[kv_namespaces]]
 binding = "PUSH"
 id = "YOUR_KV_ID"
@@ -44,13 +57,13 @@ id = "YOUR_KV_ID"
 
 Generate the token and VAPID keys:
 
-```bash
+```bash id="i4ib3z"
 npm run secrets
 ```
 
 You will get:
 
-```text
+```text id="a8bcgj"
 TOKEN=...
 VAPID_PUBLIC_KEY=...
 VAPID_PRIVATE_KEY=...
@@ -58,7 +71,7 @@ VAPID_PRIVATE_KEY=...
 
 Save them as Worker secrets:
 
-```bash
+```bash id="wsnpe5"
 npx wrangler secret put TOKEN
 npx wrangler secret put VAPID_PUBLIC_KEY
 npx wrangler secret put VAPID_PRIVATE_KEY
@@ -66,27 +79,23 @@ npx wrangler secret put VAPID_PRIVATE_KEY
 
 Deploy:
 
-```bash
+```bash id="3mk5kg"
 npm run deploy
 ```
 
-## Connect your phone
+## Connect your iPhone or iPad
 
-Open your TinyPush URL on your phone.
-
-On iPhone or iPad:
-
-1. Open it in Safari.
+1. Open your TinyPush URL in Safari.
 2. Add it to the Home Screen.
 3. Open TinyPush from the Home Screen.
 4. Enter your `TOKEN`.
 5. Tap **Enable notifications**.
 
-Your phone can now receive notifications.
+Your device can now receive notifications.
 
 ## Send a notification
 
-```bash
+```bash id="tn19j6"
 curl https://YOUR-WORKER.workers.dev/api/send \
   -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -96,13 +105,13 @@ curl https://YOUR-WORKER.workers.dev/api/send \
 
 Windows CMD:
 
-```cmd
+```cmd id="t8l499"
 curl https://YOUR-WORKER.workers.dev/api/send -X POST -H "Authorization: Bearer YOUR_TOKEN" -H "Content-Type: application/json" -d "{\"title\":\"Hello\",\"body\":\"This is a test notification\"}"
 ```
 
-Your phone should receive:
+Your iPhone or iPad should receive:
 
-```text
+```text id="8zybfu"
 🔔 Hello
 
 This is a test notification
@@ -112,34 +121,34 @@ This is a test notification
 
 Send a notification:
 
-```text
+```text id="7yz096"
 POST /api/send
 ```
 
-Subscribe a phone:
+Subscribe a device:
 
-```text
+```text id="opvpgb"
 POST /api/subscribe
 ```
 
 Get the public VAPID key:
 
-```text
+```text id="afx65k"
 GET /api/vapid
 ```
 
 ## How it works
 
-```text
-phone subscribes
-      ↓
+```text id="en70et"
+iPhone / iPad subscribes
+        ↓
 subscription saved in Cloudflare KV
-      ↓
+        ↓
 POST /api/send
-      ↓
+        ↓
 Web Push
-      ↓
-phone receives notification
+        ↓
+iPhone / iPad receives notification
 ```
 
 That is basically the whole project.
