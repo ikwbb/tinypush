@@ -1,47 +1,40 @@
 # TinyPush
 
-A deliberately tiny self-hosted Web Push service for Cloudflare Workers.
+Send notifications to your phone with a simple HTTP request.
 
-One phone. One subscription. One `/api/send` endpoint.
-
-## What it does
+TinyPush runs on Cloudflare Workers.
 
 ```text
-script / ESP32 / curl
-        |
-        | POST /api/send
-        v
-Cloudflare Worker
-        |
-        | Web Push
-        v
-      phone
+app / script / service
+        ↓
+    TinyPush
+        ↓
+     phone 🔔
 ```
 
-There are no accounts, device lists, invites, notification history, dashboards, or databases. A new subscription simply replaces the old one.
+No account system.  
+No dashboard.  
+No notification history.  
+No dedicated server.
 
-## Requirements
-
-- Cloudflare account
-- Node.js
-- Safari on iOS/iPadOS: install the site to the Home Screen before subscribing
+TinyPush stores one phone subscription. If you connect another phone, it replaces the old one.
 
 ## Setup
 
-### 1. Install
+Install dependencies:
 
 ```bash
 npm install
 npx wrangler login
 ```
 
-### 2. Create KV
+Create a KV store:
 
 ```bash
 npx wrangler kv namespace create PUSH
 ```
 
-Copy the returned namespace ID into `wrangler.toml`:
+Put the returned ID into `wrangler.toml`:
 
 ```toml
 [[kv_namespaces]]
@@ -49,7 +42,7 @@ binding = "PUSH"
 id = "YOUR_KV_ID"
 ```
 
-### 3. Generate secrets
+Generate the token and VAPID keys:
 
 ```bash
 npm run secrets
@@ -63,7 +56,7 @@ VAPID_PUBLIC_KEY=...
 VAPID_PRIVATE_KEY=...
 ```
 
-Add each value to the Worker:
+Save them as Worker secrets:
 
 ```bash
 npx wrangler secret put TOKEN
@@ -71,62 +64,85 @@ npx wrangler secret put VAPID_PUBLIC_KEY
 npx wrangler secret put VAPID_PRIVATE_KEY
 ```
 
-### 4. Deploy
+Deploy:
 
 ```bash
 npm run deploy
 ```
 
-Open the deployed URL on your phone. On iPhone/iPad, add it to the Home Screen, open the installed web app, enter `TOKEN`, then tap **Enable notifications**.
+## Connect your phone
+
+Open your TinyPush URL on your phone.
+
+On iPhone or iPad:
+
+1. Open it in Safari.
+2. Add it to the Home Screen.
+3. Open TinyPush from the Home Screen.
+4. Enter your `TOKEN`.
+5. Tap **Enable notifications**.
+
+Your phone can now receive notifications.
 
 ## Send a notification
-
-### curl
 
 ```bash
 curl https://YOUR-WORKER.workers.dev/api/send \
   -X POST \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"title":"ESP32","body":"Hello from ESP32"}'
+  -d '{"title":"Hello","body":"This is a test notification"}'
 ```
 
-### Windows CMD one-liner
+Windows CMD:
 
 ```cmd
-curl https://YOUR-WORKER.workers.dev/api/send -X POST -H "Authorization: Bearer YOUR_TOKEN" -H "Content-Type: application/json" -d "{\"title\":\"ESP32\",\"body\":\"Hello from ESP32\"}"
+curl https://YOUR-WORKER.workers.dev/api/send -X POST -H "Authorization: Bearer YOUR_TOKEN" -H "Content-Type: application/json" -d "{\"title\":\"Hello\",\"body\":\"This is a test notification\"}"
+```
+
+Your phone should receive:
+
+```text
+🔔 Hello
+
+This is a test notification
 ```
 
 ## API
 
-### `GET /api/vapid`
-
-Returns the public VAPID key.
-
-### `POST /api/subscribe`
-
-Stores one PushSubscription in KV. Requires the bearer token.
-
-### `POST /api/send`
-
-Sends a notification to the stored subscription. Requires the bearer token.
-
-```json
-{
-  "title": "Hello",
-  "body": "World"
-}
-```
-
-## Design
-
-The KV store contains exactly one useful record:
+Send a notification:
 
 ```text
-subscription -> PushSubscription JSON
+POST /api/send
 ```
 
-That is intentional. TinyPush is meant to stay tiny.
+Subscribe a phone:
+
+```text
+POST /api/subscribe
+```
+
+Get the public VAPID key:
+
+```text
+GET /api/vapid
+```
+
+## How it works
+
+```text
+phone subscribes
+      ↓
+subscription saved in Cloudflare KV
+      ↓
+POST /api/send
+      ↓
+Web Push
+      ↓
+phone receives notification
+```
+
+That is basically the whole project.
 
 ## License
 
